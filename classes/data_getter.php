@@ -4,86 +4,46 @@ namespace Blocks\GoToTestsHub;
 
 class DataGetter 
 {
-    private $cohortName;
-    private $testHubId;
+	private $cohortName = false;
+	private $hubsCategory = 3;
 
-    function __construct()
-    {
-        $this->cohortName = $this->get_student_cohort_name();
+	function __construct()
+	{
+		$this->cohortName = mb_substr($this->get_student_cohort_name(), 2, 3);
+	}
 
-        if($this->is_cohort_name_exists())
-        {
-            $this->testHubId = $this->get_hub_course_id();
-        }
-        else 
-        {
-            $this->testHubId = Main::HUB_NOT_EXIST;
-        }
-    }
+	public function get_tests_hub_id(): int
+	{
+		global $USER;
+		if( $this->cohortName )
+			$onlyactive = true;
 
-    public function get_tests_hub_id()
-    {
-        return $this->testHubId;
-    }
+			$courses = enrol_get_all_users_courses($USER->id, $onlyactive);
+			foreach( $courses as $course )
+			{
+				if( $this->cohortName === explode(',', $course->shortname)[0]
+					&&
+					$course->category == $this->hubsCategory )
+				{
+					return $course->id;
+				}
+			}
+		return Main::HUB_NOT_EXIST;
+	}
 
-    private function get_student_cohort_name()
-    {
-        global $DB, $USER;
+	private function get_student_cohort_name(): string
+	{
+		global $DB, $USER;
 
-        $sql = 'SELECT c.name 
-                FROM {cohort_members} AS cm 
-                INNER JOIN {cohort} AS c 
-                ON cm.cohortid = c.id 
-                WHERE cm.userid = ?';
-        $params = array($USER->id);
-
-        return $DB->get_field_sql($sql, $params);
-    }
-
-    private function is_cohort_name_exists() : bool 
-    {
-        if(empty($this->cohortName))
-        {
-            return false;
-        }
-        else 
-        {
-            return true;
-        }
-    }
-
-    private function get_hub_course_id()
-    {
-        $courses = $this->student_courses();
-        $courses = $this->get_only_first_part_of_name($courses);
-
-        foreach($courses as $course)
-        {
-            if(mb_stripos($this->cohortName, $course->name) !== false)
-            {
-                return $course->id;
-            }
-        }
-
-        return Main::HUB_NOT_EXIST;
-    }
-
-    private function student_courses()
-    {
-        global $USER;
-        $onlyactive = true;
-        return enrol_get_all_users_courses($USER->id, $onlyactive);
-    }
-
-    private function get_only_first_part_of_name($courses)
-    {
-        foreach($courses as $course)
-        {
-            $parts = explode(',', $course->name);
-            $course->name = $parts[0];
-        }
-
-        return $courses;
-    }
-
+		$sql = 'SELECT c.name 
+				FROM {cohort_members} AS cm 
+				INNER JOIN {cohort} AS c 
+				ON cm.cohortid = c.id 
+				WHERE cm.userid = ?
+				AND c.name REGEXP \'^[0-9]{2}.+\'';
+		$params = [$USER->id];
+		//! В теории может быть несколько групп
+		// get_field_sql return false if not found
+		return $DB->get_field_sql($sql, $params);
+	}
 }

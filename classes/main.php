@@ -13,14 +13,14 @@ class Main
     function __construct()
     {
         $getter = new DataGetter;
-        $this->$testHubId = $getter->get_tests_hub_id();
+        $this->testHubId = $getter->get_tests_hub_id();
     }
 
     public function get_page() : string 
     {
         $page = '';
 
-        if($this->$testHubId === self::HUB_NOT_EXIST)
+        if($this->testHubId === self::HUB_NOT_EXIST)
         {
             $page.= $this->get_not_student_block();
         }
@@ -58,7 +58,7 @@ class Main
 
         $block = \html_writer::tag('div', $block);
 
-        $attr = array('href' => '/course/view.php?id='.$this->$testHubId);
+        $attr = array('href' => '/course/view.php?id='.$this->testHubId);
         $block = \html_writer::tag('a', $block, $attr);
 
         return $block;
